@@ -38,6 +38,15 @@ module Fluent::Plugin
       metadata = metadata_for_tag(tag)
 
       es.each do |time, record|
+        if !metadata && record.key?("container_id")
+          # Native Fluentd integration from Docker
+          begin
+            metadata = FluentECS::Container.find(record["container_id"])
+          rescue FluentECS::IntrospectError => e
+            log.error(e)
+            nil
+          end
+        end
         if metadata
           record = merge_log_json(record) if merge_json_logs?
           if @fields_key.empty?
